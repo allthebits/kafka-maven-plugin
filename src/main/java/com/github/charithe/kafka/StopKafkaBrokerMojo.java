@@ -19,16 +19,17 @@ package com.github.charithe.kafka;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
-@Mojo (name = "stop-kafka-broker")
+@Mojo (name = "stop-kafka-broker", defaultPhase=LifecyclePhase.POST_INTEGRATION_TEST)
 public class StopKafkaBrokerMojo extends AbstractMojo {
 
-    @Parameter (defaultValue = "9092")
+	@Parameter (name="kafkaPort", defaultValue = "9092")
     private Integer kafkaPort;
-
-    @Parameter (defaultValue = "2181")
+    
+    @Parameter (name="zookeeperPort", defaultValue = "2181")
     private Integer zookeeperPort;
 
     @Override

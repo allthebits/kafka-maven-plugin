@@ -16,16 +16,26 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
+    
     <groupId>com.github.charithe</groupId>
     <artifactId>kafka-maven-plugin</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>2.0.1-SNAPSHOT</version>
     <packaging>maven-plugin</packaging>
 
     <name>kafka-maven-plugin Maven Plugin</name>
     <description>Maven plugin to spin-up a Kafka broker</description>
     <url>https://github.com/charithe/kafka-maven-plugin</url>
 
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>1.8</java.version>
+        <FSEP>${file.separator}</FSEP>
+        
+        <maven.ver>3.2.5</maven.ver>
+        <kafka.ver>1.0.0</kafka.ver><!--  0.8.2.0 -->
+        <slf4j.ver>1.7.10</slf4j.ver>
+    </properties>
+    
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
@@ -42,43 +52,39 @@
 
 
     <scm>
-        <developerConnection>scm:git:ssh://git@github.com/charithe/kafka-maven-plugin.git</developerConnection>
-        <url>https://github.com/charithe/kafka-maven-plugin</url>
+        <developerConnection>scm:git:ssh://git@github.com/allthebits/kafka-maven-plugin.git</developerConnection>
+        <url>https://github.com/allthebits/kafka-maven-plugin</url>
         <tag>HEAD</tag>
     </scm>
 
     <distributionManagement>
         <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <id>snapshots</id>
+            <url>https://nexus.ice.citrix.com/repository/snapshots/</url>
         </snapshotRepository>
         <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <id>releases</id>
+            <url>https://nexus.ice.citrix.com/repository/releases/</url>
         </repository>
     </distributionManagement>
-
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java.version>1.8</java.version>
-    </properties>
-
+    
     <dependencies>
+        <!--  MAVEN Plugins  -->
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-plugin-api</artifactId>
-            <version>3.2.5</version>
+            <version>${maven.ver}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-core</artifactId>
-            <version>3.2.5</version>
+            <version>${maven.ver}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-compat</artifactId>
-            <version>3.2.5</version>
+            <version>${maven.ver}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.plugin-tools</groupId>
@@ -92,6 +98,14 @@
             <version>3.0.20</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.maven.plugin-testing</groupId>
+            <artifactId>maven-plugin-testing-harness</artifactId>
+            <version>3.3.0</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!--  KAFKA Plugins  -->
+        <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-test</artifactId>
             <version>2.7.1</version>
@@ -104,35 +118,45 @@
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_2.10</artifactId>
-            <version>0.8.2.0</version>
+            <artifactId>kafka_2.11</artifactId><!-- kafka_2.10 -->
+            <version>${kafka.ver}</version>
             <exclusions>
                 <exclusion>
                     <groupId>log4j</groupId>
                     <artifactId>log4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
-            <version>0.8.2.0</version>
+            <version>${kafka.ver}</version>
             <exclusions>
                 <exclusion>
                     <groupId>log4j</groupId>
                     <artifactId>log4j</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
+        
+        <!--  Logging Plugins  -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.10</version>
+            <version>${slf4j.ver}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>log4j-over-slf4j</artifactId>
-            <version>1.7.10</version>
+            <version>${slf4j.ver}</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -144,12 +168,6 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.plugin-testing</groupId>
-            <artifactId>maven-plugin-testing-harness</artifactId>
-            <version>3.3.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

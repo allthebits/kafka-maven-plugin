@@ -16,41 +16,41 @@
 
 package com.github.charithe.kafka;
 
-import kafka.consumer.Consumer;
-import kafka.consumer.ConsumerConfig;
-import kafka.consumer.ConsumerIterator;
-import kafka.consumer.KafkaStream;
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.javaapi.producer.Producer;
-import kafka.message.MessageAndMetadata;
-import kafka.producer.KeyedMessage;
-import kafka.producer.ProducerConfig;
-import kafka.serializer.StringDecoder;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNull.notNullValue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.util.Collections;
+import java.util.Iterator;
+
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.maven.plugin.Mojo;
+import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.testing.MojoRule;
-import org.hamcrest.CoreMatchers;
+import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.File;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsNull.notNullValue;
-import static org.junit.Assert.assertThat;
 
 public class KafkaMojoTest {
-    private static final int ZK_PORT = 52181;
-    private static final int KAFKA_PORT = 59092;
+	private static final String ARTIFACT_ID = "kafka-maven-plugin";
 
     private static final String TOPIC = "topicX";
     private static final String KEY = "keyX";
     private static final String VALUE = "valueX";
-
+    
+    private final File pom = new File("src/test/resources/unit/project-to-test/pom.xml");
+    
     @Rule
     public MojoRule rule = new MojoRule() {
         @Override
@@ -61,68 +61,129 @@ public class KafkaMojoTest {
         protected void after() {
         }
     };
-
+    
     @Test
-    public void testBrokerStartup() throws Exception {
-        File pom = new File("src/test/resources/unit/project-to-test/pom.xml");
-        assertThat(pom, is(notNullValue()));
-
-        Mojo startMojo = rule.lookupMojo("start-kafka-broker", pom);
+    public void testCreateTopic() throws Exception {
+        assertThat(this.pom, is(notNullValue()));
+        assertTrue(this.pom.exists());
+        
+        Mojo startMojo = findMojo(this.pom, this.rule, "start-kafka-broker");
         assertThat(startMojo, is(notNullValue()));
-
-        Mojo stopMojo = rule.lookupMojo("stop-kafka-broker", pom);
-        assertThat(stopMojo, is(notNullValue()));
-
         startMojo.execute();
-
-        ProducerConfig conf = createProducerConfig();
-        Producer<String, String> producer = new Producer<>(conf);
-        producer.send(new KeyedMessage<>(TOPIC, KEY, VALUE));
-        producer.close();
-
-
-        ConsumerConfig consumerConf = createConsumerConfig();
-        ConsumerConnector consumer = Consumer.createJavaConsumerConnector(consumerConf);
-        Map<String, Integer> topicCountMap = new HashMap<>();
-        topicCountMap.put(TOPIC, 1);
-        Map<String, List<KafkaStream<String, String>>> consumerMap = consumer
-                .createMessageStreams(topicCountMap, new StringDecoder(consumerConf.props()),
-                        new StringDecoder(consumerConf.props()));
-        List<KafkaStream<String, String>> streams = consumerMap.get(TOPIC);
-
-        assertThat(streams, CoreMatchers.is(CoreMatchers.notNullValue()));
-        assertThat(streams.size(), CoreMatchers.is(equalTo(1)));
-
-        KafkaStream<String, String> ks = streams.get(0);
-        ConsumerIterator<String, String> iterator = ks.iterator();
-        MessageAndMetadata<String, String> msg = iterator.next();
-
-        assertThat(msg, CoreMatchers.is(CoreMatchers.notNullValue()));
-        assertThat(msg.key(), CoreMatchers.is(equalTo(KEY)));
-        assertThat(msg.message(), CoreMatchers.is(equalTo(VALUE)));
-
+        
+        Mojo createMojo = findMojo(this.pom, this.rule, "create-kafka-topic");
+        assertThat(createMojo, is(notNullValue()));
+        createMojo.execute();
+        
+        final String topic = "defaultTopic";
+        
+        //** Topic create should be false because it should already be created by createMojo
+        boolean created = KafkaStandalone.INSTANCE.createTopic(topic);
+        assertFalse(created);
+        
+        produceAndConsumeMessages(topic);
+        
+        Mojo stopMojo = findMojo(this.pom, this.rule, "stop-kafka-broker");
+        assertThat(stopMojo, is(notNullValue()));
         stopMojo.execute();
     }
 
+    
+    public void testBrokerStartupCreateTopicAndShutdown() throws Exception {
+        assertThat(this.pom, is(notNullValue()));
+        assertTrue(this.pom.exists());
 
-    private ProducerConfig createProducerConfig() {
-        Properties props = new Properties();
-        props.put("metadata.broker.list", "localhost:" + KAFKA_PORT);
-        props.put("serializer.class", "kafka.serializer.StringEncoder");
-        props.put("producer.type", "sync");
-        props.put("request.required.acks", "1");
+        Mojo startMojo = findMojo(this.pom, this.rule, "start-kafka-broker");
+        assertThat(startMojo, is(notNullValue()));
 
-        return new ProducerConfig(props);
+        Mojo stopMojo = findMojo(this.pom, this.rule, "stop-kafka-broker");
+        assertThat(stopMojo, is(notNullValue()));
+
+        
+        startMojo.execute();
+        
+        KafkaStandalone.INSTANCE.createTopic(TOPIC);
+        
+        stopMojo.execute();
+    }
+    
+    public void testBrokerStartupCreateTopicProduceMessagesAndConsume() throws Exception {
+        assertThat(this.pom, is(notNullValue()));
+        assertTrue(this.pom.exists());
+
+        Mojo startMojo = findMojo(this.pom, this.rule, "start-kafka-broker");
+        assertThat(startMojo, is(notNullValue()));
+
+        Mojo stopMojo = findMojo(this.pom, this.rule, "stop-kafka-broker");
+        assertThat(stopMojo, is(notNullValue()));
+
+        
+        startMojo.execute();
+        
+        KafkaStandalone.INSTANCE.createTopic(TOPIC);
+        
+        produceAndConsumeMessages(TOPIC);
+        
+        stopMojo.execute();
+    }
+    
+    private static void produceAndConsumeMessages(String topic) throws Exception {
+        Producer<String, String> producer = createProducer();
+        ProducerRecord<String,String> pr = new ProducerRecord<String,String>(topic, KEY, VALUE);
+        
+        //** Send same record multiple times
+        producer.send(pr).get();
+        producer.send(pr).get();
+        RecordMetadata rmd = producer.send(pr).get();
+        
+        assertNotNull(rmd.topic());
+        assertTrue(rmd.topic().length() > 0);
+        
+        producer.flush();
+        producer.close();
+        
+        
+        Consumer<String,String> consumer = createConsumer(topic);
+        ConsumerRecords<String, String> cr = consumer.poll(Long.MAX_VALUE);
+        
+        assertNotNull(cr);
+        
+        Iterator<ConsumerRecord<String,String>> iter = cr.iterator();
+        assertTrue(iter.hasNext());
+        
+        for ( ; iter.hasNext() ; ) {
+        	ConsumerRecord record = iter.next();
+        	assertNotNull(record.key());
+        	assertNotNull(record.value());
+        	assertTrue(VALUE.equals(record.value()));
+        }
+        
+        consumer.commitAsync();
+        consumer.close();
+    }
+    
+    private static Mojo findMojo(File pom, MojoRule rule, String goal) throws Exception {
+    	 Mojo mojo = rule.lookupEmptyMojo(goal, pom);
+    	 MojoExecution exec = rule.newMojoExecution(goal);
+    	 Xpp3Dom dom = exec.getConfiguration();
+    	 XmlPlexusConfiguration xmlCfg = new XmlPlexusConfiguration(dom);
+    	 
+    	 rule.configureMojo(mojo, xmlCfg);
+    	 
+    	 return mojo;
     }
 
-    private ConsumerConfig createConsumerConfig() {
-        Properties props = new Properties();
-        props.put("zookeeper.connect", "localhost:" + ZK_PORT);
-        props.put("group.id", "kafka-maven");
-        props.put("zookeeper.session.timeout.ms", "400");
-        props.put("zookeeper.sync.time.ms", "200");
-        props.put("auto.commit.interval.ms", "1000");
-        props.put("auto.offset.reset", "smallest");
-        return new ConsumerConfig(props);
+
+    private static Producer<String, String> createProducer() {
+    	//return new KafkaProducer<>(createProducerConfig());
+    	return KafkaStandalone.INSTANCE.createProducer();
+    }
+    
+    private static Consumer<String, String> createConsumer(String topic) {
+    	//Consumer<String, String> consumer = new KafkaConsumer<>(createConsumerConfig());
+    	Consumer<String, String> consumer = KafkaStandalone.INSTANCE.createConsumer();
+    	
+    	consumer.subscribe(Collections.singletonList(topic));
+    	return consumer;
     }
 }
