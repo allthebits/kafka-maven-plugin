@@ -22,7 +22,7 @@ public class CreateKafkaTopicMojo extends AbstractMojo {
     		if (oneTopic.trim().length() < 1) continue;
     		KafkaStandalone.INSTANCE.createTopic(oneTopic, this.noPartitions);
     		
-        	if (! KafkaStandalone.INSTANCE.topicExists(this.topic)) {
+        	if (! KafkaStandalone.INSTANCE.topicExists(oneTopic)) {
         		String msg = String.format("The topic %s did not get created.", this.topic);
         		throw new MojoFailureException(msg);
         	}

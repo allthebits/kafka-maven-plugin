@@ -44,6 +44,7 @@ import org.junit.Test;
 
 public class KafkaMojoTest {
 	private static final String ARTIFACT_ID = "kafka-maven-plugin";
+	private static final String GROUP_ID = "com.github.charithe";
 
     private static final String TOPIC = "topicX";
     private static final String KEY = "keyX";
@@ -67,23 +68,27 @@ public class KafkaMojoTest {
         assertThat(this.pom, is(notNullValue()));
         assertTrue(this.pom.exists());
         
-        Mojo startMojo = findMojo(this.pom, this.rule, "start-kafka-broker");
+        Mojo startMojo = MojoHelper.findMojo(this.pom, this.rule, ARTIFACT_ID, GROUP_ID, "start-kafka-broker");
         assertThat(startMojo, is(notNullValue()));
         startMojo.execute();
         
-        Mojo createMojo = findMojo(this.pom, this.rule, "create-kafka-topic");
+        Mojo createMojo = MojoHelper.findMojo(this.pom, this.rule, ARTIFACT_ID, GROUP_ID, "create-kafka-topic");
         assertThat(createMojo, is(notNullValue()));
         createMojo.execute();
         
-        final String topic = "defaultTopic";
+        final String[] sa = new String[] { "defaultTestTopic", "defaultTestTopic2", "defaultTestTopic3" };
         
-        //** Topic create should be false because it should already be created by createMojo
-        boolean created = KafkaStandalone.INSTANCE.createTopic(topic);
-        assertFalse(created);
+      //** TOPIC CREATE SHOULD BE FALSE BECAUSE IT SHOULD ALREADY BE CREATED BY CREATEMOJO
+        for (String s : sa) {
+            boolean created = KafkaStandalone.INSTANCE.createTopic(s);
+            String msg = String.format("Result %b for topic %s should have been FALSE", created, s);
+            assertFalse(msg, created);
+            
+            produceAndConsumeMessages(s);
+        }
+
         
-        produceAndConsumeMessages(topic);
-        
-        Mojo stopMojo = findMojo(this.pom, this.rule, "stop-kafka-broker");
+        Mojo stopMojo = MojoHelper.findMojo(this.pom, this.rule, ARTIFACT_ID, GROUP_ID, "stop-kafka-broker");
         assertThat(stopMojo, is(notNullValue()));
         stopMojo.execute();
     }
@@ -93,10 +98,10 @@ public class KafkaMojoTest {
         assertThat(this.pom, is(notNullValue()));
         assertTrue(this.pom.exists());
 
-        Mojo startMojo = findMojo(this.pom, this.rule, "start-kafka-broker");
+        Mojo startMojo = MojoHelper.findMojo(this.pom, this.rule, "start-kafka-broker");
         assertThat(startMojo, is(notNullValue()));
 
-        Mojo stopMojo = findMojo(this.pom, this.rule, "stop-kafka-broker");
+        Mojo stopMojo = MojoHelper.findMojo(this.pom, this.rule, "stop-kafka-broker");
         assertThat(stopMojo, is(notNullValue()));
 
         
@@ -111,10 +116,10 @@ public class KafkaMojoTest {
         assertThat(this.pom, is(notNullValue()));
         assertTrue(this.pom.exists());
 
-        Mojo startMojo = findMojo(this.pom, this.rule, "start-kafka-broker");
+        Mojo startMojo = MojoHelper.findMojo(this.pom, this.rule, "start-kafka-broker");
         assertThat(startMojo, is(notNullValue()));
 
-        Mojo stopMojo = findMojo(this.pom, this.rule, "stop-kafka-broker");
+        Mojo stopMojo = MojoHelper.findMojo(this.pom, this.rule, "stop-kafka-broker");
         assertThat(stopMojo, is(notNullValue()));
 
         
@@ -128,7 +133,7 @@ public class KafkaMojoTest {
     }
     
     private static void produceAndConsumeMessages(String topic) throws Exception {
-        Producer<String, String> producer = createProducer();
+        Producer<String, String> producer = MojoHelper.createProducer();
         ProducerRecord<String,String> pr = new ProducerRecord<String,String>(topic, KEY, VALUE);
         
         //** Send same record multiple times
@@ -143,7 +148,7 @@ public class KafkaMojoTest {
         producer.close();
         
         
-        Consumer<String,String> consumer = createConsumer(topic);
+        Consumer<String,String> consumer = MojoHelper.createConsumer(topic);
         ConsumerRecords<String, String> cr = consumer.poll(Long.MAX_VALUE);
         
         assertNotNull(cr);
@@ -160,30 +165,5 @@ public class KafkaMojoTest {
         
         consumer.commitAsync();
         consumer.close();
-    }
-    
-    private static Mojo findMojo(File pom, MojoRule rule, String goal) throws Exception {
-    	 Mojo mojo = rule.lookupEmptyMojo(goal, pom);
-    	 MojoExecution exec = rule.newMojoExecution(goal);
-    	 Xpp3Dom dom = exec.getConfiguration();
-    	 XmlPlexusConfiguration xmlCfg = new XmlPlexusConfiguration(dom);
-    	 
-    	 rule.configureMojo(mojo, xmlCfg);
-    	 
-    	 return mojo;
-    }
-
-
-    private static Producer<String, String> createProducer() {
-    	//return new KafkaProducer<>(createProducerConfig());
-    	return KafkaStandalone.INSTANCE.createProducer();
-    }
-    
-    private static Consumer<String, String> createConsumer(String topic) {
-    	//Consumer<String, String> consumer = new KafkaConsumer<>(createConsumerConfig());
-    	Consumer<String, String> consumer = KafkaStandalone.INSTANCE.createConsumer();
-    	
-    	consumer.subscribe(Collections.singletonList(topic));
-    	return consumer;
     }
 }

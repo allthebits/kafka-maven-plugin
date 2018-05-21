@@ -50,7 +50,7 @@
                         <phase>integration-test</phase>
                         <goals><goal>create-kafka-topic</goal></goals>
                         <configuration>
-                            <topic>defaultTestTopic</topic>
+                            <topic>defaultTestTopic,defaultTestTopic2,defaultTestTopic3</topic>
                         </configuration>
                     </execution>                    
                     <execution>
