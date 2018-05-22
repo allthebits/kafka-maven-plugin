@@ -38,7 +38,7 @@
                 <executions>
                     <execution>
                         <id>start</id>
-                        <phase>pre-integration-test</phase>
+                        <phase>initialize</phase>
                         <goals><goal>start-kafka-broker</goal></goals>
 		                <configuration>
 		                    <kafkaPort>59092</kafkaPort>
@@ -47,12 +47,36 @@
                     </execution>
                     <execution>
                         <id>topic</id>
-                        <phase>integration-test</phase>
+                        <phase>test</phase>
                         <goals><goal>create-kafka-topic</goal></goals>
                         <configuration>
                             <topic>defaultTestTopic,defaultTestTopic2,defaultTestTopic3</topic>
                         </configuration>
-                    </execution>                    
+                    </execution>
+                    
+                    <execution>
+                        <id>produceMessage</id>
+                        <phase>test</phase>
+                        <goals><goal>produce-kafka-message</goal></goals>
+                        <configuration>
+                            <topic>defaultTestTopic</topic>
+                            <message>
+                               Here is a kafka message in the defaultTestTopic
+                            </message>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>consumeMessage</id>
+                        <phase>integration-test</phase>
+                        <goals><goal>consume-kafka-message</goal></goals>
+                        <configuration>
+                            <topic>defaultTestTopic</topic>
+                            <messageRegex>
+                               ^Here is a kafka message in the defaultTestTopic$
+                            </messageRegex>
+                        </configuration>
+                    </execution>
+                    
                     <execution>
                         <id>stop</id>
                         <phase>post-integration-test</phase>
