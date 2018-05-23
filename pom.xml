@@ -17,6 +17,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     
+    <parent>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>mojo-parent</artifactId>
+        <version>40</version>
+    </parent>
+    
     <groupId>com.github.charithe</groupId>
     <artifactId>kafka-maven-plugin</artifactId>
     <version>2.0.1-SNAPSHOT</version>
@@ -25,13 +31,14 @@
     <name>kafka-maven-plugin Maven Plugin</name>
     <description>Maven plugin to spin-up a Kafka broker</description>
     <url>https://github.com/charithe/kafka-maven-plugin</url>
-
+    
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
         <FSEP>${file.separator}</FSEP>
         
         <maven.ver>3.2.5</maven.ver>
+        <maven.pluginTools.ver>3.4</maven.pluginTools.ver>
         <kafka.ver>1.0.0</kafka.ver><!--  0.8.2.0 -->
         <slf4j.ver>1.7.10</slf4j.ver>
     </properties>
@@ -86,12 +93,18 @@
             <artifactId>maven-compat</artifactId>
             <version>${maven.ver}</version>
         </dependency>
+        
         <dependency>
             <groupId>org.apache.maven.plugin-tools</groupId>
             <artifactId>maven-plugin-annotations</artifactId>
-            <version>3.4</version>
-            <scope>provided</scope>
+            <version>${maven.pluginTools.ver}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.maven.plugin-tools</groupId>
+            <artifactId>maven-plugin-tools-api</artifactId>
+            <version>${maven.pluginTools.ver}</version>
+        </dependency>
+        
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-utils</artifactId>
@@ -189,10 +202,14 @@
                     <target>${java.version}</target>
                 </configuration>
             </plugin>
+           
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-plugin-plugin</artifactId>
                 <version>3.4</version>
+                <configuration>
+                    <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
+                </configuration>
                 <executions>
                     <execution>
                         <id>default-descriptor</id>
@@ -206,6 +223,20 @@
                     </execution>
                 </executions>
             </plugin>
+            
+            <plugin>
+                <groupId>org.codehaus.plexus</groupId>
+                <artifactId>plexus-component-metadata</artifactId>
+                <version>1.5.5</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate-metadata</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>

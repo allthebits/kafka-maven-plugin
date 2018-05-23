@@ -5,16 +5,20 @@ package com.github.charithe.kafka;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Properties;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 
 /**
  * @author vagrant
@@ -32,6 +36,9 @@ public class ConsumeKafkaMessage extends AbstractMojo {
     
     @Parameter (name="pollTime", defaultValue = "MAX_VALUE")
     private String pollTime;
+    
+    @Parameter( name="project", defaultValue = "${project}", readonly = true, required=true )
+    private MavenProject project;
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
@@ -53,9 +60,12 @@ public class ConsumeKafkaMessage extends AbstractMojo {
         	}
         }
         
+        Properties props = this.project.getProperties();
+        props.setProperty("consume-kafka-message.success", "" + containsMessage);
         if (! containsMessage) {
         	String msg = String.format("The topic %s did not contain a message matching the regex %s.", this.topic, getMessageRegex());
-        	throw new MojoFailureException(msg);
+        	//throw new MojoFailureException(msg);
+        	props.setProperty("consume-kafka-message.message", msg);
         }
         consumer.commitAsync();
 	}

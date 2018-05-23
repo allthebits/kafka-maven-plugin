@@ -11,9 +11,14 @@ import java.util.Map;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.producer.Producer;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.Mojo;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.testing.MojoRule;
+import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.ContainerConfiguration;
+import org.codehaus.plexus.configuration.PlexusConfiguration;
+import org.codehaus.plexus.configuration.PlexusConfigurationMerger;
 import org.codehaus.plexus.configuration.xml.XmlPlexusConfiguration;
 import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
@@ -77,7 +82,23 @@ final class MojoHelper {
 		    xmlCfg = new XmlPlexusConfiguration(dom);
 		}
 		
-		rule.configureMojo(mojo, xmlCfg);
+		//PlexusConfigurationMerger.merge(xmlCfg, cfg);
+		
+		mojo = rule.configureMojo(mojo, xmlCfg);
+		
+		MavenProject proj = rule.readMavenProject(pom.getParentFile());
+		MavenSession sess = rule.newMavenSession(proj);
+		PlexusConfiguration cfg = rule.extractPluginConfiguration(artifactId, pom);
+		
+		Map<String, Object> mcfg = new java.util.HashMap<>();
+		mcfg.put("session", sess);
+		mcfg.put("project", proj);
+		for (String key : mcfg.keySet()) {
+			try {
+				rule.setVariableValueToObject(mojo, key, mcfg.get(key));
+			} catch (NullPointerException ex) {
+			}
+		}
 		
 		return mojo;
 	}
