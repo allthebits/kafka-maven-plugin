@@ -51,6 +51,9 @@ import java.util.Properties;
 public enum KafkaStandalone implements AutoCloseable {
 	INSTANCE;
 	
+	public static final Integer KAFKA_TESTING_PORT = 59092;
+	public static final Integer ZOOKEEPER_TESTING_PORT = 52181;
+	
 	private static final Logger LOG = org.apache.log4j.LogManager.getLogger(KafkaStandalone.class);
 
 	private TestingServer zookeeper;
@@ -59,18 +62,29 @@ public enum KafkaStandalone implements AutoCloseable {
 	private Path kafkaLogDir;
 	private String kafkaHostname = "localhost";
 	private Integer kafkaPort;
+	private Integer zookeeperPort;
 	private final Properties overrideProps = new Properties();
-
-	public void start(int zookeeperPort, int kafkaPort) throws Exception {
+	
+	public void configure(int zookeeperPort, int kafkaPort) {
 		synchronized (this) {
 			if (this.kafkaPort != null) {
 				return;
 			}
 		}
 		this.kafkaPort = kafkaPort;
+		this.zookeeperPort = zookeeperPort;
 		
-		this.zookeeper = getZookeeper(zookeeperPort);
-		this.kafka = getKafka(this.zookeeper, kafkaPort);
+	}
+
+	public void start() throws Exception {
+		synchronized (this) {
+			if (this.kafka != null) {
+				return;
+			}
+		}
+		
+		this.zookeeper = getZookeeper(this.zookeeperPort);
+		this.kafka = getKafka(this.zookeeper, this.kafkaPort);
 	}
 	
 	public void setProperty(String key, String value) {
@@ -176,7 +190,7 @@ public enum KafkaStandalone implements AutoCloseable {
         String grpid;
     	synchronized (this) {
     		grpid = "test-consumer-groupid" + System.currentTimeMillis();
-    		clientid = getClass().getSimpleName() + "-Producer-" + System.currentTimeMillis();
+    		clientid = getClass().getSimpleName() + "-Consumer-" + System.currentTimeMillis();
 		}
         cfg.put(ConsumerConfig.GROUP_ID_CONFIG, grpid);
         cfg.put(ConsumerConfig.CLIENT_ID_CONFIG, clientid);
@@ -259,7 +273,7 @@ public enum KafkaStandalone implements AutoCloseable {
 		props.put("zookeeper.connect", zookeeperQuorum);
 		
 		
-		props.put("auto.offset.reset", "latest");
+		props.put("auto.offset.reset", "earliest");
 		props.put("zookeeper.session.timeout.ms", "30000");
 		props.put("auto.create.topics.enable", "true");
 		

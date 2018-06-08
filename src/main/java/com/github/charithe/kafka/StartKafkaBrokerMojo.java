@@ -32,12 +32,20 @@ public class StartKafkaBrokerMojo extends AbstractMojo {
 
     @Parameter (name="zookeeperPort", defaultValue = "2181")
     protected Integer zookeeperPort;
+    
+    public static void main(String... sa) throws Exception {
+    	StartKafkaBrokerMojo mojo = new StartKafkaBrokerMojo();
+    	mojo.kafkaPort = KafkaStandalone.KAFKA_TESTING_PORT;
+    	mojo.zookeeperPort = KafkaStandalone.ZOOKEEPER_TESTING_PORT;
+    	mojo.execute();
+    }
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
             getLog().info("Starting Zookeeper on port " + zookeeperPort + " and Kafka broker on port " + kafkaPort);
-            KafkaStandalone.INSTANCE.start(zookeeperPort, kafkaPort);
+            KafkaStandalone.INSTANCE.configure(zookeeperPort, kafkaPort);
+            KafkaStandalone.INSTANCE.start();
         } catch (Exception e) {
             getLog().error("Failed to start Kafka broker", e);
             throw new MojoExecutionException("Failed to start Kafka broker");

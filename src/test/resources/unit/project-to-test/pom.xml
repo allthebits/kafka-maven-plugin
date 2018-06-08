@@ -60,6 +60,7 @@
                         <goals><goal>produce-kafka-message</goal></goals>
                         <configuration>
                             <topic>defaultTestTopic</topic>
+                            <key>testMessage</key>
                             <message>
                                Here is a kafka message in the defaultTestTopic
                             </message>
@@ -74,6 +75,7 @@
                             <messageRegex>
                                ^Here is a kafka message in the defaultTestTopic$
                             </messageRegex>
+                            <resultId>int-test</resultId>
                         </configuration>
                     </execution>
                     

@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.io.FileUtils;
@@ -19,6 +20,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 
 /**
  * @author vagrant
@@ -29,18 +31,42 @@ import org.apache.maven.plugins.annotations.Parameter;
 
 @Mojo (name = "produce-kafka-message", defaultPhase=LifecyclePhase.INTEGRATION_TEST)
 public class ProduceKafkaMessages extends AbstractMojo {
+	private static final String MVN_PROPERTY = "produce-kafka-message.keys";
+	
     @Parameter (name="topic", defaultValue = "defaultTopic")
     private String topic;
     
     @Parameter (name="message", required = true)
     private String message;
-
+    
+    @Parameter (name="key", required = true)
+    private String key;
+    
+    @Parameter( name="project", defaultValue = "${project}", readonly = true, required=true )
+    private MavenProject project;
+	
+    public static void main(String... sa) throws Exception {
+    	ProduceKafkaMessages mojo = new ProduceKafkaMessages();
+    	mojo.topic = "al.raw";
+    	mojo.key = "testMessage002";
+    	mojo.message = "/home/vagrant/git/martel-java/kafka-integration/src/test/resources/testData01.json";
+    	mojo.project = new MavenProject();
+    	//** Make sure Properties are not NULL
+    	mojo.project.getProperties().getProperty("test");
+    	
+    	KafkaStandalone.INSTANCE.configure(KafkaStandalone.ZOOKEEPER_TESTING_PORT, KafkaStandalone.KAFKA_TESTING_PORT);
+    	
+    	mojo.execute();
+    }
+    
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
+		String key = getKey();
+		
 		try {
 			String msg = getMessage();
 			Producer<String, String> prod = KafkaStandalone.INSTANCE.createProducer();
-			String key = System.currentTimeMillis() + "";
+			
 			ProducerRecord<String,String> pr = new ProducerRecord<String,String>(this.topic, key, msg);
 			prod.send(pr).get();
 			
@@ -49,6 +75,20 @@ public class ProduceKafkaMessages extends AbstractMojo {
 		} catch (InterruptedException | ExecutionException | IOException e) {
 			throw new MojoExecutionException(e.getMessage(), e);
 		}
+        Properties props = this.project.getProperties();
+        String val = props.getProperty(MVN_PROPERTY, "");
+        if (val.length() > 0) {
+        	val += ",";
+        }
+        val += key;
+        props.setProperty(MVN_PROPERTY, val);
+	}
+	
+	private String getKey() {
+		if (this.key != null && this.key.trim().length() > 0) return this.key.trim();
+		
+		String key = System.currentTimeMillis() + "";
+		return key;
 	}
     
 	private String getMessage() throws IOException {

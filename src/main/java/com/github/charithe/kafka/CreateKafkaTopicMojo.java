@@ -15,6 +15,15 @@ public class CreateKafkaTopicMojo extends AbstractMojo {
     
     private int noPartitions = 1;
     
+    public static void main(String... sa) throws Exception {
+    	CreateKafkaTopicMojo mojo = new CreateKafkaTopicMojo();
+    	mojo.topic = "al.raw,al.transformed,al.audit";
+    	
+    	KafkaStandalone.INSTANCE.configure(KafkaStandalone.ZOOKEEPER_TESTING_PORT, KafkaStandalone.KAFKA_TESTING_PORT);
+    	
+    	mojo.execute();
+    }
+    
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
     	String[] sa = this.topic.split(",");
